@@ -1,0 +1,46 @@
+﻿@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MyFinanceBlazor.UI.Models;
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+@page "/expenses"
+
+<PageTitle>Expenses</PageTitle>
+
+<h1>Expenses</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Назва</th>
+            <th>Категорія</th>
+            <th>Дата</th>
+            <th>Ціна</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var expense in userExpenses)
+        {
+            <tr>
+                <td>@expense.Title</td>
+                <td>@expense.Category</td>
+                <td>@expense.ExpenseDate.ToString()</td>
+                <td>@expense.Cost</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Expense> userExpenses = new List<Expense>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authInfo = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var userName = authInfo.User.Identity.Name;
+
+        userExpenses = await Http.GetFromJsonAsync<List<Expense>>($"api/users/{userName}/expenses?pageNumber=1&pageSize=10&orderBy=ExpenseDate_desc");
+    }
+}
