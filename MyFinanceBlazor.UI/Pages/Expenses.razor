@@ -1,4 +1,6 @@
-﻿@using Microsoft.AspNetCore.Authorization;
+﻿@using AntDesign
+@using AntDesign.TableModels;
+@using Microsoft.AspNetCore.Authorization;
 @using Microsoft.AspNetCore.Components.Authorization;
 @using MyFinanceBlazor.UI.Models;
 @inject HttpClient Http
@@ -10,37 +12,49 @@
 
 <h1>Expenses</h1>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Назва</th>
-            <th>Категорія</th>
-            <th>Дата</th>
-            <th>Ціна</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var expense in userExpenses)
-        {
-            <tr>
-                <td>@expense.Title</td>
-                <td>@expense.Category</td>
-                <td>@expense.ExpenseDate.ToString()</td>
-                <td>@expense.Cost</td>
-            </tr>
-        }
-    </tbody>
-</table>
+<Table TItem="Expense" DataSource="userExpenses" Loading="_loading" Total="_total" OnChange="HandleTableChange" RemoteDataSource>
+    <Selection Key="@context.Id" />
+    <PropertyColumn Property="c=>c.Title">@context.Title</PropertyColumn>
+    <PropertyColumn Property="c=>c.ExpenseDate" Sortable DefaultSortOrder="SortDirection.Ascending">@context.ExpenseDate.ToString("ddd d MMM")</PropertyColumn>
+    <PropertyColumn Property="c=>c.Category" Sortable DefaultSortOrder="SortDirection.Ascending">@context.Category</PropertyColumn>
+    <PropertyColumn Property="c=>c.Cost" Sortable DefaultSortOrder="SortDirection.Ascending">@context.Cost</PropertyColumn>
+</Table>
 
 @code {
     private List<Expense> userExpenses = new List<Expense>();
+    bool _loading = false;
+    int _total;
+
+    async Task HandleTableChange(QueryModel<Expense> queryModel)
+    {
+        _loading = true;
+
+        var data = await Http.GetFromJsonAsync<List<Expense>>($"api/users/tarik/expenses" + ConstructQueryParams(queryModel));
+
+        _loading = false;
+        userExpenses = data;
+        _total = 200;
+    }
+
+    private string ConstructQueryParams(QueryModel<Expense> queryModel)
+    {
+        var res = string.Format("?pageNumber={0}&pageSize={1}&orderBy=ExpenseDate_desc", queryModel.PageIndex, queryModel.PageSize, queryModel.SortModel, queryModel.SortModel);
+        return res;
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var authInfo = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        //var authInfo = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        var userName = authInfo.User.Identity.Name;
+        //var userName = authInfo.User.Identity.Name;
 
-        userExpenses = await Http.GetFromJsonAsync<List<Expense>>($"api/users/{userName}/expenses?pageNumber=1&pageSize=10&orderBy=ExpenseDate_desc");
+        //userExpenses = await Http.GetFromJsonAsync<List<Expense>>($"api/users/{userName}/expenses?pageNumber=1&pageSize=10&orderBy=ExpenseDate_desc");
+    }
+
+    public class ApiResponse
+    {
+        public Expense[] Results { get; set; }
+
+        public int TotalCount { get; set; } = 200; // 200 is mock data, you should read it from server
     }
 }
